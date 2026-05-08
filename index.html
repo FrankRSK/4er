@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>4er Brettspiel (Freie Platzierung)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent; /* Entfernt blaues Blinken bei Touch */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 100%);
+            height: 100dvh; /* dvh passt sich mobilen Browser-Leisten an */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden; 
+            touch-action: none; /* Verhindert Scrollen */
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            width: 95%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            max-height: 98dvh;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .game-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 5px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 12px;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .player-info.current-player {
+            opacity: 1;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+
+        .stone-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        /* Container für das Board - flexibel */
+        .board-wrapper {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px 0;
+            min-height: 0;
+            position: relative;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px; /* Etwas kleinerer Abstand für Mobile */
+            background: rgba(0, 0, 0, 0.4);
+            padding: 6px;
+            border-radius: 12px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-height: 100%;
+        }
+
+        .cell {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15%; /* Leicht abgerundete Quadrate passen besser zur freien Platzierung */
+            position: relative;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .cell:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .stone {
+            width: 85%;
+            height: 85%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            position: absolute;
+            transform: scale(0); /* Startet unsichtbar klein */
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy Effekt */
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .stone.placed {
+            transform: scale(1);
+        }
+
+        .stone.player1 {
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b);
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .stone.player2 {
+            background: radial-gradient(circle at 30% 30%, #4ecdc4, #16a085);
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .stone.winning {
+            animation: winningPulse 1s infinite alternate;
+            filter: brightness(1.3);
+            z-index: 10;
+        }
+
+        @keyframes winningPulse {
+            from { transform: scale(1); box-shadow: 0 0 10px white; }
+            to { transform: scale(1.15); box-shadow: 0 0 20px white; }
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: auto;
+            flex-shrink: 0;
+            padding-top: 10px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 20px; /* Größere Touch-Fläche */
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn:active {
+            background: rgba(255,255,255,0.3);
+            transform: scale(0.96);
+        }
+
+        .game-message {
+            text-align: center;
+            font-weight: bold;
+            height: 20px;
+            color: #ffd700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            white-space: nowrap;
+        }
+
+        .difficulty-selector select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background: #fff;
+            color: #333;
+            margin: 20% auto;
+            padding: 25px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 400px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #555;
+            cursor: pointer;
+            padding: 5px; /* Touch area vergrößern */
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .legal-footer {
+            text-align: center; 
+            margin-top: 10px; 
+            font-size: 0.7em; 
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">4er Brettspiel</h1>
+            
+            <div class="difficulty-selector">
+                <label for="difficulty">KI:</label>
+                <select id="difficulty">
+                    <option value="easy">Leicht</option>
+                    <option value="medium" selected>Mittel</option>
+                    <option value="hard">Schwer</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="game-info">
+            <div class="player-info" id="player1-info">
+                <span>Du</span> <span style="color:#ff6b6b; font-size:1.2em">●</span>
+                <div class="stone-count" id="player1-stones">25</div>
+            </div>
+            <div class="game-message" id="game-message">Du beginnst!</div>
+            <div class="player-info" id="player2-info">
+                <div class="stone-count" id="player2-stones">24</div>
+                <span style="color:#4ecdc4; font-size:1.2em">●</span> <span>KI</span>
+            </div>
+        </div>
+
+        <div class="board-wrapper">
+            <div class="game-board" id="game-board">
+                </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn" onclick="newGame()">Neu</button>
+            <button class="btn" onclick="showRules()">Regeln</button>
+            <button class="btn" onclick="toggleSound()" id="sound-btn">🔊 An</button>
+        </div>
+        
+        <div class="legal-footer">
+            <a href="https://spiele.frank-kemper.com/index.php#rechtliches" style="color:white; text-decoration:none;">Datenschutz & Impressum</a>
+        </div>
+    </div>
+
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeRules()">&times;</span>
+            <h2 style="color:#1a2a6c; margin-bottom:15px;">📋 Spielregeln</h2>
+            <p><strong>Ziel:</strong> Bilde eine Reihe aus 4 Steinen (Horizontal, Vertikal oder Diagonal).</p>
+            <br>
+            <p><strong>Besonderheit:</strong> Es gibt <u>keine Schwerkraft</u>! Du kannst deinen Stein auf jedes freie Feld legen.</p>
+            <br>
+            <p><strong>Tipp:</strong> Blockiere den Gegner frühzeitig, da er überall bauen kann.</p>
+        </div>
+    </div>
+
+    <script>
+        class BoardGame {
+            constructor() {
+                this.rows = 7;
+                this.cols = 7;
+                this.board = Array(this.rows).fill().map(() => Array(this.cols).fill(0));
+                this.currentPlayer = 1; // 1 = Mensch, 2 = KI
+                this.player1Stones = 25;
+                this.player2Stones = 24;
+                this.gameOver = false;
+                this.soundEnabled = true;
+                this.difficulty = 'medium';
+                this.isProcessing = false; 
+                
+                this.initBoard();
+                this.updateDisplay();
+            }
+
+            initBoard() {
+                const board = document.getElementById('game-board');
+                board.innerHTML = '';
+                
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.r = r;
+                        cell.dataset.c = c;
+                        // Click Handler direkt auf die Koordinaten
+                        cell.onclick = () => this.handleCellClick(r, c);
+                        board.appendChild(cell);
+                    }
+                }
+            }
+
+            handleCellClick(row, col) {
+                // Prüfungen: Spiel vorbei? KI dran? Zelle belegt?
+                if (this.gameOver || this.currentPlayer === 2 || this.isProcessing) return;
+                if (this.board[row][col] !== 0) return;
+
+                this.makeMove(row, col, 1);
+            }
+
+            makeMove(row, col, player) {
+                this.isProcessing = true;
+                this.board[row][col] = player;
+                
+                if (player === 1) this.player1Stones--;
+                else this.player2Stones--;
+
+                this.visualizeMove(row, col, player);
+                this.playSound('place');
+
+                if (this.checkWin(row, col, player)) {
+                    this.endGame(player);
+                    this.isProcessing = false;
+                    return;
+                }
+
+                if (this.player1Stones === 0 && this.player2Stones === 0) {
+                    this.endGame(0);
+                    this.isProcessing = false;
+                    return;
+                }
+
+                this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+                this.updateDisplay();
+
+                if (this.currentPlayer === 2) {
+                    // KI simuliert "Denken"
+                    const thinkingTime = this.difficulty === 'hard' ? 1000 : 600;
+                    setTimeout(() => {
+                        this.aiMove();
+                        this.isProcessing = false; 
+                    }, thinkingTime);
+                } else {
+                    this.isProcessing = false;
+                }
+            }
+
+            visualizeMove(row, col, player) {
+                const cell = document.querySelector(`.cell[data-r="${row}"][data-c="${col}"]`);
+                if (cell) {
+                    const stone = document.createElement('div');
+                    stone.className = `stone player${player}`;
+                    // Timeout um CSS Transition zu triggern
+                    setTimeout(() => stone.classList.add('placed'), 10);
+                    cell.appendChild(stone);
+                }
+            }
+
+            // --- KI LOGIK (Ohne Schwerkraft) ---
+            aiMove() {
+                if (this.gameOver) return;
+                document.getElementById('game-message').textContent = "KI überlegt...";
+
+                const move = this.getBestMove();
+                if (move) {
+                    this.makeMove(move.r, move.c, 2);
+                }
+            }
+
+            getBestMove() {
+                // Sammle alle leeren Felder
+                let emptyCells = [];
+                for(let r=0; r<this.rows; r++) {
+                    for(let c=0; c<this.cols; c++) {
+                        if(this.board[r][c] === 0) emptyCells.push({r, c});
+                    }
+                }
+
+                if (emptyCells.length === 0) return null;
+
+                // 1. Priorität: Sofort gewinnen
+                for (let cell of emptyCells) {
+                    this.board[cell.r][cell.c] = 2;
+                    if (this.checkWin(cell.r, cell.c, 2)) {
+                        this.board[cell.r][cell.c] = 0;
+                        return cell;
+                    }
+                    this.board[cell.r][cell.c] = 0;
+                }
+
+                // 2. Priorität: Sofortiges Verlieren verhindern (Blocken)
+                for (let cell of emptyCells) {
+                    this.board[cell.r][cell.c] = 1; // Simuliere Gegnerzug
+                    if (this.checkWin(cell.r, cell.c, 1)) {
+                        this.board[cell.r][cell.c] = 0;
+                        return cell; // Muss geblockt werden
+                    }
+                    this.board[cell.r][cell.c] = 0;
+                }
+
+                // 3. Strategie basierend auf Schwierigkeit
+                if (this.difficulty === 'easy') {
+                    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                }
+
+                // Medium/Hard: Bewerte Positionen
+                // Wir nutzen eine Bewertungsfunktion für jedes freie Feld
+                let bestScore = -Infinity;
+                let bestMoves = [];
+
+                for (let cell of emptyCells) {
+                    let score = this.evaluatePosition(cell.r, cell.c);
+                    
+                    // Zufallsfaktor für Variation bei gleichen Scores
+                    if (this.difficulty === 'medium') score += Math.random() * 10; 
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMoves = [cell];
+                    } else if (score === bestScore) {
+                        bestMoves.push(cell);
+                    }
+                }
+
+                return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+            }
+
+            evaluatePosition(row, col) {
+                let score = 0;
+
+                // Zentrum ist wertvoll (bei 7x7 ist 3,3 die Mitte)
+                const centerDist = Math.abs(row - 3) + Math.abs(col - 3);
+                score -= centerDist * 2; // Je näher an Mitte, desto besser
+
+                // Prüfe alle 4 Richtungen für strategischen Wert
+                const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+                
+                for (const [dr, dc] of directions) {
+                    // Prüfe wie viele eigene/gegnerische Steine in Linie liegen würden
+                    score += this.evaluateLine(row, col, dr, dc);
+                }
+                return score;
+            }
+
+            evaluateLine(row, col, dr, dc) {
+                let lineScore = 0;
+                // Wir schauen uns die Linie an, die durch diesen Punkt geht
+                // und zählen, wie viele Steine wir schon haben (Potenzial für 3er oder 4er)
+                
+                // Simuliere Steinsetzung
+                this.board[row][col] = 2; 
+                let aiCount = this.countConsecutive(row, col, dr, dc, 2);
+                
+                this.board[row][col] = 1;
+                let humanCount = this.countConsecutive(row, col, dr, dc, 1);
+                
+                this.board[row][col] = 0; // Reset
+
+                // Angriffswert
+                if (aiCount >= 3) lineScore += 100; // Fast gewonnen
+                else if (aiCount == 2) lineScore += 10;
+
+                // Verteidigungswert (Hard Mode gewichtet das höher)
+                if (this.difficulty === 'hard') {
+                    if (humanCount >= 3) lineScore += 80; // Gegner hat fast 4
+                    else if (humanCount == 2) lineScore += 15; // Gegner baut auf
+                }
+
+                return lineScore;
+            }
+
+            countConsecutive(row, col, dr, dc, player) {
+                let count = 0; // Stein selbst ist schon simuliert
+                // Vorwärts und Rückwärts prüfen, wie viele Steine in Folge liegen
+                // Wichtig: Wir prüfen nur die direkte Umgebung, die durch den Stein verbunden wird
+                
+                // Einfache Heuristik: Zähle Steine im 4er Radius
+                let tempCount = 1;
+                for(let i=1; i<4; i++) {
+                    let r = row + dr*i, c = col + dc*i;
+                    if(r>=0 && r<7 && c>=0 && c<7 && this.board[r][c] === player) tempCount++;
+                    else break;
+                }
+                for(let i=1; i<4; i++) {
+                    let r = row - dr*i, c = col - dc*i;
+                    if(r>=0 && r<7 && c>=0 && c<7 && this.board[r][c] === player) tempCount++;
+                    else break;
+                }
+                return tempCount;
+            }
+
+            checkWin(row, col, player) {
+                const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+                
+                for (const [dr, dc] of directions) {
+                    let count = 1;
+                    let winningCells = [[row, col]];
+
+                    // Positive Richtung
+                    for (let i = 1; i < 4; i++) {
+                        const r = row + dr * i;
+                        const c = col + dc * i;
+                        if (r >= 0 && r < this.rows && c >= 0 && c < this.cols && this.board[r][c] === player) {
+                            count++;
+                            winningCells.push([r, c]);
+                        } else break;
+                    }
+
+                    // Negative Richtung
+                    for (let i = 1; i < 4; i++) {
+                        const r = row - dr * i;
+                        const c = col - dc * i;
+                        if (r >= 0 && r < this.rows && c >= 0 && c < this.cols && this.board[r][c] === player) {
+                            count++;
+                            winningCells.push([r, c]);
+                        } else break;
+                    }
+
+                    if (count >= 4) {
+                        this.highlightWin(winningCells);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            highlightWin(cells) {
+                cells.forEach(([r, c]) => {
+                    const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"] .stone`);
+                    if (cell) cell.classList.add('winning');
+                });
+            }
+
+            endGame(winner) {
+                this.gameOver = true;
+                let msg = "";
+                if (winner === 1) {
+                    msg = "Gewonnen! 🎉";
+                    this.playSound('win');
+                } else if (winner === 2) {
+                    msg = "KI gewinnt 🤖";
+                    this.playSound('lose');
+                } else {
+                    msg = "Unentschieden 🤝";
+                    this.playSound('draw');
+                }
+                document.getElementById('game-message').textContent = msg;
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                document.getElementById('player1-stones').textContent = this.player1Stones;
+                document.getElementById('player2-stones').textContent = this.player2Stones;
+                
+                const p1 = document.getElementById('player1-info');
+                const p2 = document.getElementById('player2-info');
+                
+                if (!this.gameOver) {
+                    if (this.currentPlayer === 1) {
+                        p1.classList.add('current-player');
+                        p2.classList.remove('current-player');
+                        document.getElementById('game-message').textContent = "Du bist dran";
+                    } else {
+                        p1.classList.remove('current-player');
+                        p2.classList.add('current-player');
+                        document.getElementById('game-message').textContent = "KI denkt...";
+                    }
+                }
+            }
+
+            playSound(type) {
+                if (!this.soundEnabled) return;
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                const now = ctx.currentTime;
+                
+                if (type === 'place') {
+                    // Helleres "Plopp" Geräusch
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'win') {
+                    [523, 659, 784, 1046].forEach((f, i) => {
+                        const o = ctx.createOscillator();
+                        const g = ctx.createGain();
+                        o.connect(g);
+                        g.connect(ctx.destination);
+                        o.frequency.value = f;
+                        g.gain.setValueAtTime(0.1, now + i*0.1);
+                        g.gain.linearRampToValueAtTime(0, now + i*0.1 + 0.3);
+                        o.start(now + i*0.1);
+                        o.stop(now + i*0.1 + 0.3);
+                    });
+                } else if (type === 'lose') {
+                    [400, 300, 200].forEach((f, i) => {
+                         const o = ctx.createOscillator();
+                        const g = ctx.createGain();
+                        o.type = 'triangle';
+                        o.connect(g);
+                        g.connect(ctx.destination);
+                        o.frequency.value = f;
+                        g.gain.setValueAtTime(0.1, now + i*0.2);
+                        g.gain.linearRampToValueAtTime(0, now + i*0.2 + 0.4);
+                        o.start(now + i*0.2);
+                        o.stop(now + i*0.2 + 0.4);
+                    });
+                }
+            }
+        }
+
+        let game;
+        
+        function newGame() {
+            game = new BoardGame();
+            game.difficulty = document.getElementById('difficulty').value;
+        }
+
+        function toggleSound() {
+            game.soundEnabled = !game.soundEnabled;
+            document.getElementById('sound-btn').textContent = game.soundEnabled ? '🔊 An' : '🔇 Aus';
+        }
+
+        function showRules() { document.getElementById('rulesModal').style.display = 'block'; }
+        function closeRules() { document.getElementById('rulesModal').style.display = 'none'; }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            newGame();
+            document.getElementById('difficulty').addEventListener('change', (e) => {
+                game.difficulty = e.target.value;
+            });
+        });
+
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('rulesModal')) closeRules();
+        }
+    </script>
+</body>
+</html>
