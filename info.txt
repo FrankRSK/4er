@@ -1,0 +1,20 @@
+📋 Spielregeln: 4er Brettspiel (Freie Platzierung)
+
+Das Spielprinzip Dies ist eine taktische Variante des Klassikers "Vier gewinnt". Der entscheidende Unterschied: Es gibt keine Schwerkraft! Die Steine fallen nicht nach unten, sondern können auf jedem beliebigen freien Feld des Brettes platziert werden.
+
+🎯 Ziel des Spiels Verbinde 4 deiner Steine (♦) zu einer ununterbrochenen Linie. Dies ist möglich:
+    ↔️ Waagerecht
+    ↕️ Senkrecht
+    ↘️↙️ Diagonal
+
+🎮 Spielablauf
+    Der Start: Du (Rot) beginnst das Spiel.
+    Setzen: Wähle ein beliebiges freies Feld auf dem gesamten Spielfeld aus. Du bist nicht an die unterste Reihe gebunden.
+    Die KI: Nachdem du deinen Stein platziert hast, macht der Computer (Türkis) seinen Zug.
+    Strategie: Da du überall setzen kannst, musst du nicht nur deine eigenen Reihen aufbauen, sondern auch vorausschauend die Felder blockieren, die der Gegner für seine Linien nutzen könnte – egal wo auf dem Brett.
+
+🏆 Spielende
+    Sieg: Wer zuerst 4 Steine in einer Reihe hat, gewinnt sofort.
+    Unentschieden: Wenn alle Felder belegt sind und niemand 4 in einer Reihe hat, endet das Spiel unentschieden.
+
+💡 Tipp Achte besonders auf "Zwickmühlen": Versuche, deine Steine so zu platzieren, dass du mit dem nächsten Zug zwei Gewinnmöglichkeiten gleichzeitig hast. Da du überall setzen darfst, ist dies der Schlüssel zum Sieg!
